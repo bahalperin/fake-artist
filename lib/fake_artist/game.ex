@@ -43,6 +43,9 @@ defmodule FakeArtist.Game do
     {:error, :game_already_started}
   end
 
+  def find(%{ code: code }) do
+    Repo.get_by(Game, code: code)
+  end
 
   def start(%Game{ status: :in_progress }) do
     {:error, :game_already_started}

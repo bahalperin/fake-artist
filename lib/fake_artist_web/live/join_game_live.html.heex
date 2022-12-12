@@ -1,0 +1,11 @@
+    <.form let={f} for={@changeset} phx-change="validate" phx-submit="save">
+        <%= label f, :code %>
+        <%= text_input f, :code %>
+        <%= error_tag f, :code %>
+
+        <%= label f, :username %>
+        <%= text_input f, :username %>
+        <%= error_tag f, :username %>
+
+        <%= submit "Save" %>
+    </.form>

@@ -18,6 +18,10 @@ defmodule FakeArtistWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+
+    live "/game/new", NewGameLive
+    live "/game/join", JoinGameLive
+    live "/game/:code", PlayGameLive
   end
 
   # Other scopes may use custom stacks.
