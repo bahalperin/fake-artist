@@ -6,8 +6,27 @@ defmodule FakeArtist.Game do
 
   schema "games" do
     field :code, :string
-    field :status, Ecto.Enum, values: [:not_started, :in_progress, :complete]
-    field :users, {:array, :string}
+
+    field :status, Ecto.Enum,
+      values: [
+        :not_started,
+        :selecting_word,
+        :drawing,
+        :voting,
+        :fake_artist_guessing,
+        :complete
+      ]
+
+    field :current_user_id, :string
+    field :fake_artist_id, :string
+    field :question_master_id, :string
+    field :drawing_category, :string
+    field :drawing_word, :string
+    field :drawing_state, :map
+    field :turns_taken, :integer
+    field :votes, :map
+
+    embeds_many :users, FakeArtist.User
 
     timestamps()
   end
@@ -15,29 +34,44 @@ defmodule FakeArtist.Game do
   @doc false
   def changeset(game, attrs) do
     game
-    |> cast(attrs, [:code, :users, :status])
-    |> validate_required([:code, :users, :status])
+    |> cast(attrs, [
+      :code,
+      :status,
+      :current_user_id,
+      :fake_artist_id,
+      :question_master_id,
+      :drawing_category,
+      :drawing_word,
+      :drawing_state,
+      :turns_taken,
+      :votes
+    ])
+    |> cast_embed(:users)
+    |> validate_required([:code, :status])
   end
 
   def new() do
     %Game{}
-      |> changeset(%{
-        code: generate_game_code(),
-        users: [],
-        status: :not_started
-      })
-      |> Repo.insert!
+    |> changeset(%{
+      code: generate_game_code(),
+      users: [],
+      status: :not_started,
+      turns_taken: 0,
+      votes: %{}
+    })
+    |> Repo.insert!()
   end
 
-  def join(%Game{ status: :not_started } = game, %{ username: name }) do
-    updated_game = game
+  def join(%Game{status: :not_started} = game, user) do
+    updated_game =
+      game
       |> changeset(%{
-        users: [name | game.users]
+        users: [user | game.users]
       })
-      |> Repo.update!
+      |> Repo.update!()
 
     game
-      |> broadcast({ :user_joined, %{ username: name }})
+    |> broadcast({:user_joined, user})
 
     {:ok, updated_game}
   end
@@ -46,34 +80,101 @@ defmodule FakeArtist.Game do
     {:error, :game_already_started}
   end
 
-  def find(%{ code: code }) do
+  def find(%{code: code}) do
     Repo.get_by(Game, code: code)
   end
 
-  def start(%Game{ status: :in_progress }) do
-    {:error, :game_already_started}
-  end
-  def start(%Game{ status: :completed }) do
-    {:error, :game_already_started}
-  end
-  def start(%Game{ users: [] }) do
+
+  def start(%Game{users: []}) do
     {:error, :not_enough_users}
   end
-  def start(%Game{ users: [_user1] }) do
+
+  def start(%Game{users: [_user1]}) do
     {:error, :not_enough_users}
   end
-  def start(%Game{ status: :not_started } = game) do
-    updated_game = game
+
+  def start(%Game{status: :not_started} = game) do
+    [question_master, fake_artist] =
+      Enum.take_random(
+        game.users,
+        2
+      )
+
+    updated_game =
+      game
       |> changeset(%{
-        status: :in_progress
+        status: :selecting_word,
+        question_master_id: question_master.id,
+        fake_artist_id: fake_artist.id
       })
-      |> Repo.update!
+      |> Repo.update!()
 
     {:ok, updated_game}
   end
+
   def start(_game) do
-    {:error, :not_enough_users}
+    {:error, :game_already_started}
   end
+
+  def choose_category_and_word(%Game{status: :selecting_word} = game, payload)
+      when payload.user_id == game.question_master_id do
+
+    first_player = game
+        |> artists
+        |> Enum.random
+
+    game
+    |> changeset(%{
+      drawing_category: payload.category,
+      drawing_word: payload.word,
+      status: :drawing,
+      current_user_id: first_player.id
+    })
+    |> Repo.update!
+  end
+  def choose_category_and_word(game, _payload), do: game
+
+
+  def submit_drawing(%Game{ status: :drawing } = game, payload)
+      when payload.user_id == game.current_user_id do
+
+        turns_taken = game.turns_taken + 1
+        status = if turns_taken >= max_turns(game), do: :voting, else: game.status
+
+        game
+          |> changeset(%{
+            drawing_state: payload.drawing,
+            current_user_id: game |> next_artist |> Map.get(:id),
+            turns_taken: turns_taken,
+            status: status
+          })
+          |> Repo.update!
+  end
+  def submit_drawing(game, _payload), do: game
+
+  def submit_vote(%Game{ status: :voting } = game, payload) do
+    updated_votes = game.votes |> Map.put(payload.user_id, payload.vote)
+    vote_count = updated_votes |> map_size
+    artist_count = game |> artists |> length
+
+    game
+      |> changeset(%{
+        votes: updated_votes,
+        status: if(vote_count == artist_count, do: :fake_artist_guessing, else: game.status)
+      })
+      |> Repo.update!
+  end
+  def submit_vote(game, _payload), do: game
+
+  def done_guessing_word(%Game{ status: :fake_artist_guessing } = game) do
+    game
+      |> changeset(%{
+        status: :complete
+      })
+      |> Repo.update!
+  end
+  def done_guessing_word(game), do: game
+
 
   def subscribe(game) do
     Phoenix.PubSub.subscribe(FakeArtist.PubSub, "game:#{game.code}")
@@ -83,10 +184,31 @@ defmodule FakeArtist.Game do
     Phoenix.PubSub.broadcast(FakeArtist.PubSub, "game:#{game.code}", message)
   end
 
-  defp generate_game_code() do
-    1..6
-      |> Enum.map(fn _ -> Enum.random(?a..?z) end)
-      |> to_string
+  defp artists(game) do
+    game.users
+      |> Enum.filter(fn user -> user.id != game.question_master_id end)
   end
 
+  defp next_artist(game) do
+    game_artists = game |> artists
+    current_index = game_artists
+      |> Enum.find_index(fn artist -> artist.id == game.current_user_id end)
+
+    next_index = rem(current_index + 1, length(game_artists))
+
+    Enum.at(game_artists, next_index)
+  end
+
+  defp max_turns(game) do
+    game
+      |> artists
+      |> length
+      |> Kernel.*(2)
+  end
+
+  defp generate_game_code() do
+    1..6
+    |> Enum.map(fn _ -> Enum.random(?a..?z) end)
+    |> to_string
+  end
 end
