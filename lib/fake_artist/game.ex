@@ -36,6 +36,9 @@ defmodule FakeArtist.Game do
       })
       |> Repo.update!
 
+    game
+      |> broadcast({ :user_joined, %{ username: name }})
+
     {:ok, updated_game}
   end
 
@@ -70,6 +73,14 @@ defmodule FakeArtist.Game do
   end
   def start(_game) do
     {:error, :not_enough_users}
+  end
+
+  def subscribe(game) do
+    Phoenix.PubSub.subscribe(FakeArtist.PubSub, "game:#{game.code}")
+  end
+
+  defp broadcast(game, message) do
+    Phoenix.PubSub.broadcast(FakeArtist.PubSub, "game:#{game.code}", message)
   end
 
   defp generate_game_code() do
