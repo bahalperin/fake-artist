@@ -22,7 +22,7 @@ defmodule FakeArtist.Game do
     field :question_master_id, :string
     field :drawing_category, :string
     field :drawing_word, :string
-    field :drawing_state, :map
+    field :drawing_state, {:array, :map}
     field :turns_taken, :integer
     field :votes, :map
 
@@ -56,6 +56,7 @@ defmodule FakeArtist.Game do
       code: generate_game_code(),
       users: [],
       status: :not_started,
+      drawing_state: [],
       turns_taken: 0,
       votes: %{}
     })
@@ -153,7 +154,7 @@ defmodule FakeArtist.Game do
 
     game = game
     |> changeset(%{
-      drawing_state: payload.drawing,
+      drawing_state: [payload.drawing | game.drawing_state],
       current_user_id: game |> next_artist |> Map.get(:id),
       turns_taken: turns_taken,
       status: status

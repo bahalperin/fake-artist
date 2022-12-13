@@ -118,3 +118,15 @@
   0% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+#canvas {
+  left: calc(50% - 390px);
+  top: 50px;
+  width: 780px;
+  height: 490px;
+  border: 1px dotted black;
+}
+
+[data-your-turn] #canvas {
+  cursor: crosshair;
+}

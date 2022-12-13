@@ -140,11 +140,11 @@ defmodule FakeArtist.GameTest do
         })
         |> Game.submit_drawing(%{
           user_id: "artist_1",
-          drawing: %{ "artist_1" => "done"}
+          drawing: %{ "points" => [%{ x: 1, y: 2}, %{ x: 2, y: 2}]}
         })
 
       assert game.turns_taken == 1
-      assert game.drawing_state["artist_1"] == "done"
+      assert length(game.drawing_state) == 1
       assert game.current_user_id == "artist_2"
     end
 
@@ -155,11 +155,11 @@ defmodule FakeArtist.GameTest do
         })
         |> Game.submit_drawing(%{
           user_id: "artist_1",
-          drawing: %{ "artist_1" => "done"}
+          drawing: %{ "points" => [%{ x: 1, y: 2}, %{ x: 2, y: 2}]}
         })
 
       assert game.turns_taken == 0
-      assert is_nil(game.drawing_state)
+      assert length(game.drawing_state) == 0
     end
 
     test "does nothing if player plays out of turn" do
@@ -170,28 +170,30 @@ defmodule FakeArtist.GameTest do
         })
         |> Game.submit_drawing(%{
           user_id: "artist_2",
-          drawing: %{ "artist_2" => "done"}
+          drawing: %{ "points" => [%{ x: 1, y: 2}, %{ x: 2, y: 2}]}
         })
 
       assert game.turns_taken == 0
-      assert is_nil(game.drawing_state)
+      assert length(game.drawing_state) == 0
     end
 
     test "when every artist has gone twice, moves to voting" do
-      game =
+      original_game =
         example_game(%{
           status: :drawing,
           turns_taken: 7,
           current_user_id: "artist_3"
         })
+      game =
+        original_game
         |> Game.submit_drawing(%{
           user_id: "artist_3",
-          drawing: %{ "artist_3" => "done"}
+          drawing: %{ "points" => [%{ x: 1, y: 2}, %{ x: 2, y: 2}]}
         })
 
       assert game.status == :voting
       assert game.turns_taken == 8
-      assert game.drawing_state["artist_3"] == "done"
+      assert length(game.drawing_state) == length(original_game.drawing_state) + 1
     end
   end
 
@@ -276,6 +278,7 @@ defmodule FakeArtist.GameTest do
           question_master_id: "qm_id",
           fake_artist_id: "fa_id",
           turns_taken: 0,
+          drawing_state: [],
           votes: %{},
           users: [
             %{
