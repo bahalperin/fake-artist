@@ -85,16 +85,36 @@ defmodule FakeArtist.Game do
     {:error, :game_already_started}
   end
 
+  def leave(%Game{status: :not_started} = game, %{ user_id: id }) do
+    game_users =
+      game.users
+      |> Enum.filter(fn user -> user.id != id end)
+      |> Enum.map(&Map.from_struct/1)
+
+    updated_game =
+      game
+      |> changeset(%{
+        users: game_users
+      })
+      |> Repo.update!()
+
+    updated_game
+    |> broadcast({:user_left, %{ user_id: id }})
+
+    updated_game
+  end
+  def leave(game, _user), do: game
+
   def find(%{code: code}) do
     Repo.get_by(Game, code: code)
   end
 
-  def start(%Game{users: []}) do
+  def start(game) when length(game.users) < 5 do
     {:error, :not_enough_users}
   end
 
-  def start(%Game{users: [_user1]}) do
-    {:error, :not_enough_users}
+  def start(game) when length(game.users) > 10 do
+    {:error, :too_many_users}
   end
 
   def start(%Game{status: :not_started} = game) do

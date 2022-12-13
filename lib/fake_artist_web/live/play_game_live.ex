@@ -25,7 +25,8 @@ defmodule FakeArtistWeb.PlayGameLive do
         game: game,
         vote: "",
         line: %{},
-        question_master_changeset: %FakeArtist.QuestionMasterForm{}
+        question_master_changeset:
+          %FakeArtist.QuestionMasterForm{}
           |> FakeArtist.QuestionMasterForm.changeset(%{})
       )
     }
@@ -66,14 +67,22 @@ defmodule FakeArtistWeb.PlayGameLive do
     end
   end
 
-  def handle_event("validate_word", %{ "question_master_form" => data }, socket) do
+  def handle_event("leave", _params, socket) do
+    {:noreply,
+     assign(socket,
+       game: socket.assigns.game |> Game.leave(%{user_id: socket.assigns.session_id})
+     )}
+  end
+
+  def handle_event("validate_word", %{"question_master_form" => data}, socket) do
     {
       :noreply,
       assign(
         socket,
-      question_master_changeset: %FakeArtist.QuestionMasterForm{}
-        |> FakeArtist.QuestionMasterForm.changeset(data)
-        |> Map.put(:action, :insert)
+        question_master_changeset:
+          %FakeArtist.QuestionMasterForm{}
+          |> FakeArtist.QuestionMasterForm.changeset(data)
+          |> Map.put(:action, :insert)
       )
     }
   end
@@ -82,7 +91,8 @@ defmodule FakeArtistWeb.PlayGameLive do
       when not socket.assigns.question_master_changeset.valid? do
     {:noreply, socket}
   end
-  def handle_event("submit_word", %{ "question_master_form" => data }, socket) do
+
+  def handle_event("submit_word", %{"question_master_form" => data}, socket) do
     {:noreply,
      assign(socket,
        game:
@@ -119,7 +129,7 @@ defmodule FakeArtistWeb.PlayGameLive do
     {:noreply, assign(socket, line: %{points: params["points"]})}
   end
 
-  def handle_event("select_vote", %{ "user-id" => user_id }, socket) do
+  def handle_event("select_vote", %{"user-id" => user_id}, socket) do
     {:noreply, assign(socket, vote: user_id)}
   end
 
@@ -130,7 +140,7 @@ defmodule FakeArtistWeb.PlayGameLive do
          socket.assigns.game
          |> Game.submit_vote(%{
            user_id: socket.assigns.session_id,
-           vote: socket.assigns.vote,
+           vote: socket.assigns.vote
          })
      )}
   end
@@ -140,7 +150,7 @@ defmodule FakeArtistWeb.PlayGameLive do
   end
 
   def handle_event("restart", _params, socket) do
-    {:noreply, assign(socket, game: socket.assigns.game |> Game.restart()) }
+    {:noreply, assign(socket, game: socket.assigns.game |> Game.restart())}
   end
 
   def handle_info(_msg, socket) do
@@ -167,6 +177,9 @@ defmodule FakeArtistWeb.PlayGameLive do
     </div>
     <% end %>
     <%= if @game.status == :not_started do %>
+      <%= if @game.users |> Enum.find(fn user -> user.id == @session_id end) do %>
+      <button phx-click="leave">Leave</button>
+      <% end %>
       <button phx-click="start">Start</button>
     <% end %>
     <%= if @game.status == :selecting_word do %>
