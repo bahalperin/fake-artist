@@ -226,6 +226,9 @@ defmodule FakeArtist.Game do
   end
   def restart(game), do: game
 
+  def word(game, %{ user_id: id }) when game.fake_artist_id == id, do: "X"
+  def word(game, _user), do: game.drawing_word
+
   def subscribe(game) do
     Phoenix.PubSub.subscribe(FakeArtist.PubSub, "game:#{game.code}")
   end

@@ -23,7 +23,9 @@ defmodule FakeArtistWeb.PlayGameLive do
       assign(
         socket,
         game: game,
-        line: %{}
+        line: %{},
+        question_master_changeset: %FakeArtist.QuestionMasterForm{}
+          |> FakeArtist.QuestionMasterForm.changeset(%{})
       )
     }
   end
@@ -63,14 +65,30 @@ defmodule FakeArtistWeb.PlayGameLive do
     end
   end
 
-  def handle_event("select_word", _params, socket) do
+  def handle_event("validate_word", %{ "question_master_form" => data }, socket) do
+    {
+      :noreply,
+      assign(
+        socket,
+      question_master_changeset: %FakeArtist.QuestionMasterForm{}
+        |> FakeArtist.QuestionMasterForm.changeset(data)
+        |> Map.put(:action, :insert)
+      )
+    }
+  end
+
+  def handle_event("submit_word", _payload, socket)
+      when not socket.assigns.question_master_changeset.valid? do
+    {:noreply, socket}
+  end
+  def handle_event("submit_word", %{ "question_master_form" => data }, socket) do
     {:noreply,
      assign(socket,
        game:
          socket.assigns.game
          |> Game.choose_category_and_word(%{
-           word: "apple",
-           category: "food",
+           word: data["word"],
+           category: data["category"],
            user_id: socket.assigns.session_id
          })
      )}
@@ -148,13 +166,25 @@ defmodule FakeArtistWeb.PlayGameLive do
     <% end %>
     <%= if @game.status == :selecting_word do %>
       <%= if @game.question_master_id == @session_id do %>
-        <button phx-click="select_word">Select Word</button>
+        <.form let={f} for={@question_master_changeset} phx-change="validate_word" phx-submit="submit_word">
+            <%= label f, :category %>
+            <%= text_input f, :category %>
+            <%= error_tag f, :category %>
+
+            <%= label f, :word %>
+            <%= text_input f, :word %>
+            <%= error_tag f, :word %>
+
+            <%= submit "Save" %>
+        </.form>
       <% end %>
     <% end %>
     <%= if @game.status == :drawing do %>
     <div>
       <div>current_user: <%= Enum.find(@game.users, fn user -> user.id === @game.current_user_id end) |> Map.get(:name) %></div>
       <div>turns_taken: <%= @game.turns_taken %></div>
+      <div>category: <%= @game.drawing_category %></div>
+      <div>word: <%= Game.word(@game, %{ user_id: @session_id }) %></div>
       <%= if @game.current_user_id == @session_id do %>
         <button phx-click="undo_drawing">Undo Drawing</button>
         <button phx-click="submit_drawing">Submit Drawing</button>

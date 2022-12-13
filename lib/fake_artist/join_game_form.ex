@@ -11,7 +11,7 @@ defmodule FakeArtist.JoinGameForm do
     form
     |> cast(attrs, [:code, :username])
     |> validate_required([:code, :username])
-    |> validate_length(:code, min: 6, max: 6)
+    |> validate_length(:code, is: 6)
     |> validate_length(:username, min: 1, max: 30)
   end
 
