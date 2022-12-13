@@ -116,6 +116,10 @@ defmodule FakeArtistWeb.PlayGameLive do
     {:noreply, assign(socket, game: socket.assigns.game |> Game.done_guessing_word())}
   end
 
+  def handle_event("restart", _params, socket) do
+    {:noreply, assign(socket, game: socket.assigns.game |> Game.restart()) }
+  end
+
   def handle_info(_msg, socket) do
     game = Game.find(%{code: socket.assigns.game.code})
     {:noreply, assign(socket, game: game)}
@@ -184,6 +188,7 @@ defmodule FakeArtistWeb.PlayGameLive do
       <%= for vote <- Map.values(@game.votes) do %>
       <%= vote %>
       <% end %>
+      <button phx-click="restart">Start a new game</button>
     </div>
     <% end %>
     """

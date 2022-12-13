@@ -22,7 +22,7 @@ defmodule FakeArtist.Game do
     field :question_master_id, :string
     field :drawing_category, :string
     field :drawing_word, :string
-    field :drawing_state, {:array, :map}
+    field :drawing_state, {:array, :map}, on_replace: :delete
     field :turns_taken, :integer
     field :votes, :map
 
@@ -203,6 +203,28 @@ defmodule FakeArtist.Game do
   end
 
   def done_guessing_word(game), do: game
+
+  def restart(%Game{ status: :complete } = game) do
+    game = game
+      |> changeset(%{
+        votes: %{},
+        drawing_state: [],
+        drawing_word: "",
+        drawing_category: "",
+        status: :not_started,
+        current_user_id: nil,
+        fake_artist_id: nil,
+        question_master_id: nil,
+        turns_taken: 0
+      })
+      |>Repo.update!
+
+    game
+      |> broadcast({:restarted})
+
+    game
+  end
+  def restart(game), do: game
 
   def subscribe(game) do
     Phoenix.PubSub.subscribe(FakeArtist.PubSub, "game:#{game.code}")
