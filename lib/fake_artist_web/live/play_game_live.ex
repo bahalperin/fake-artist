@@ -23,6 +23,7 @@ defmodule FakeArtistWeb.PlayGameLive do
       assign(
         socket,
         game: game,
+        vote: "",
         line: %{},
         question_master_changeset: %FakeArtist.QuestionMasterForm{}
           |> FakeArtist.QuestionMasterForm.changeset(%{})
@@ -118,14 +119,18 @@ defmodule FakeArtistWeb.PlayGameLive do
     {:noreply, assign(socket, line: %{points: params["points"]})}
   end
 
-  def handle_event("vote", _params, socket) do
+  def handle_event("select_vote", %{ "user-id" => user_id }, socket) do
+    {:noreply, assign(socket, vote: user_id)}
+  end
+
+  def handle_event("submit_vote", _params, socket) do
     {:noreply,
      assign(socket,
        game:
          socket.assigns.game
          |> Game.submit_vote(%{
            user_id: socket.assigns.session_id,
-           vote: socket.assigns.game |> Game.artists() |> Enum.random() |> Map.get(:id)
+           vote: socket.assigns.vote,
          })
      )}
   end
@@ -204,10 +209,23 @@ defmodule FakeArtistWeb.PlayGameLive do
     </div>
     <% end %>
     <%= if @game.status == :voting do %>
-      <%= for vote <- Map.values(@game.votes) do %>
-      <%= vote %>
+      <%= if @game.votes |> Map.get(@session_id) do %>
+        <div>Waiting for others to vote</div>
+      <% else %>
+      <h3>Vote for:</h3>
+      <%= for artist <- @game |> Game.artists do %>
+      <div>
+        <button
+          phx-click="select_vote"
+          phx-value-user-id={artist.id}
+          disabled={@vote == artist.id}
+        >
+          <%= artist.name %>
+        </button>
+        </div>
       <% end %>
-      <button phx-click="vote">Vote</button>
+      <button disabled={!@vote} phx-click="submit_vote">Submit</button>
+      <% end %>
     <% end %>
     <%= if @game.status == :fake_artist_guessing do %>
       <button phx-click="done">Done</button>
