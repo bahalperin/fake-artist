@@ -4,8 +4,12 @@ defmodule FakeArtistWeb.JoinGameLive do
   alias FakeArtist.Game
   alias FakeArtist.JoinGameForm
 
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, changeset: %JoinGameForm{} |> JoinGameForm.changeset(%{ code: "", username: ""}))}
+  def mount(params, session, socket) do
+    {:ok,
+     assign(socket,
+       session_id: session["session_id"],
+       changeset: %JoinGameForm{} |> JoinGameForm.changeset(%{code: params["code"], username: ""})
+     )}
   end
 
   def handle_event("validate", %{"join_game_form" => data}, socket) do
@@ -26,7 +30,7 @@ defmodule FakeArtistWeb.JoinGameLive do
   end
 
   def handle_event("save", %{"join_game_form" => data}, socket) do
-    game = Game.find(%{ code: data["code"] })
+    game = Game.find(%{code: data["code"]})
 
     case game do
       nil ->
@@ -34,7 +38,10 @@ defmodule FakeArtistWeb.JoinGameLive do
 
       _ ->
         game
-          |> Game.join(%{ username: data["username"] })
+        |> Game.join(%{
+          id: socket.assigns.session_id,
+          name: data["username"]
+        })
 
         {:noreply, redirect(socket, to: "/game/#{game.code}")}
     end

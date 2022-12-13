@@ -8,6 +8,7 @@ defmodule FakeArtistWeb.Router do
     plug :put_root_layout, {FakeArtistWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :assign_session_id
   end
 
   pipeline :api do
@@ -55,6 +56,16 @@ defmodule FakeArtistWeb.Router do
       pipe_through :browser
 
       forward "/mailbox", Plug.Swoosh.MailboxPreview
+    end
+  end
+
+  defp assign_session_id(conn, _) do
+    if get_session(conn, :session_id) do
+      # If the session_id is already set, don't replace it.
+      conn
+    else
+      session_id = Ecto.UUID.generate()
+      conn |> put_session(:session_id, session_id)
     end
   end
 end

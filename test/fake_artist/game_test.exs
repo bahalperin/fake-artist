@@ -49,7 +49,9 @@ defmodule FakeArtist.GameTest do
 
     test "fails to start game in invalid states" do
       {:error, err} =
-        %Game{status: :in_progress}
+        example_game(%{
+          status: :drawing
+        })
         |> Game.start()
 
       assert err == :game_already_started

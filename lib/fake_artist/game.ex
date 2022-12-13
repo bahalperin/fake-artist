@@ -26,7 +26,7 @@ defmodule FakeArtist.Game do
     field :turns_taken, :integer
     field :votes, :map
 
-    embeds_many :users, FakeArtist.User
+    embeds_many :users, FakeArtist.User, on_replace: :delete
 
     timestamps()
   end
@@ -63,10 +63,14 @@ defmodule FakeArtist.Game do
   end
 
   def join(%Game{status: :not_started} = game, user) do
+    game_users =
+      game.users
+      |> Enum.map(&Map.from_struct/1)
+
     updated_game =
       game
       |> changeset(%{
-        users: [user | game.users]
+        users: [%{id: user.id, name: user.name} | game_users]
       })
       |> Repo.update!()
 
@@ -83,7 +87,6 @@ defmodule FakeArtist.Game do
   def find(%{code: code}) do
     Repo.get_by(Game, code: code)
   end
-
 
   def start(%Game{users: []}) do
     {:error, :not_enough_users}
@@ -109,6 +112,9 @@ defmodule FakeArtist.Game do
       })
       |> Repo.update!()
 
+    updated_game
+    |> broadcast({:game_started})
+
     {:ok, updated_game}
   end
 
@@ -118,63 +124,84 @@ defmodule FakeArtist.Game do
 
   def choose_category_and_word(%Game{status: :selecting_word} = game, payload)
       when payload.user_id == game.question_master_id do
+    first_player =
+      game
+      |> artists
+      |> Enum.random()
 
-    first_player = game
-        |> artists
-        |> Enum.random
-
-    game
+    game = game
     |> changeset(%{
       drawing_category: payload.category,
       drawing_word: payload.word,
       status: :drawing,
       current_user_id: first_player.id
     })
-    |> Repo.update!
+    |> Repo.update!()
+
+    game
+    |> broadcast({:word_chosen})
+
+    game
   end
+
   def choose_category_and_word(game, _payload), do: game
 
-
-  def submit_drawing(%Game{ status: :drawing } = game, payload)
+  def submit_drawing(%Game{status: :drawing} = game, payload)
       when payload.user_id == game.current_user_id do
+    turns_taken = game.turns_taken + 1
+    status = if turns_taken >= max_turns(game), do: :voting, else: game.status
 
-        turns_taken = game.turns_taken + 1
-        status = if turns_taken >= max_turns(game), do: :voting, else: game.status
+    game = game
+    |> changeset(%{
+      drawing_state: payload.drawing,
+      current_user_id: game |> next_artist |> Map.get(:id),
+      turns_taken: turns_taken,
+      status: status
+    })
+    |> Repo.update!()
 
-        game
-          |> changeset(%{
-            drawing_state: payload.drawing,
-            current_user_id: game |> next_artist |> Map.get(:id),
-            turns_taken: turns_taken,
-            status: status
-          })
-          |> Repo.update!
+    game
+    |> broadcast({:drawing_submitted})
+
+    game
   end
+
   def submit_drawing(game, _payload), do: game
 
-  def submit_vote(%Game{ status: :voting } = game, payload) do
+  def submit_vote(%Game{status: :voting} = game, payload) do
     updated_votes = game.votes |> Map.put(payload.user_id, payload.vote)
     vote_count = updated_votes |> map_size
     artist_count = game |> artists |> length
 
+    game = game
+    |> changeset(%{
+      votes: updated_votes,
+      status: if(vote_count == artist_count, do: :fake_artist_guessing, else: game.status)
+    })
+    |> Repo.update!()
+
     game
-      |> changeset(%{
-        votes: updated_votes,
-        status: if(vote_count == artist_count, do: :fake_artist_guessing, else: game.status)
-      })
-      |> Repo.update!
+    |> broadcast({:vote_submitted})
+
+    game
   end
+
   def submit_vote(game, _payload), do: game
 
-  def done_guessing_word(%Game{ status: :fake_artist_guessing } = game) do
-    game
-      |> changeset(%{
-        status: :complete
-      })
-      |> Repo.update!
-  end
-  def done_guessing_word(game), do: game
+  def done_guessing_word(%Game{status: :fake_artist_guessing} = game) do
+    game = game
+    |> changeset(%{
+      status: :complete
+    })
+    |> Repo.update!()
 
+    game
+    |> broadcast({:guessing_done})
+
+    game
+  end
+
+  def done_guessing_word(game), do: game
 
   def subscribe(game) do
     Phoenix.PubSub.subscribe(FakeArtist.PubSub, "game:#{game.code}")
@@ -184,14 +211,16 @@ defmodule FakeArtist.Game do
     Phoenix.PubSub.broadcast(FakeArtist.PubSub, "game:#{game.code}", message)
   end
 
-  defp artists(game) do
+  def artists(game) do
     game.users
-      |> Enum.filter(fn user -> user.id != game.question_master_id end)
+    |> Enum.filter(fn user -> user.id != game.question_master_id end)
   end
 
   defp next_artist(game) do
     game_artists = game |> artists
-    current_index = game_artists
+
+    current_index =
+      game_artists
       |> Enum.find_index(fn artist -> artist.id == game.current_user_id end)
 
     next_index = rem(current_index + 1, length(game_artists))
@@ -201,9 +230,9 @@ defmodule FakeArtist.Game do
 
   defp max_turns(game) do
     game
-      |> artists
-      |> length
-      |> Kernel.*(2)
+    |> artists
+    |> length
+    |> Kernel.*(2)
   end
 
   defp generate_game_code() do
