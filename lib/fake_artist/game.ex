@@ -109,7 +109,7 @@ defmodule FakeArtist.Game do
     Repo.get_by(Game, code: code)
   end
 
-  def start(game) when length(game.users) < 5 do
+  def start(game) when length(game.users) < 3 do
     {:error, :not_enough_users}
   end
 

@@ -22,135 +22,9 @@ defmodule FakeArtistWeb.PlayGameLive do
       :ok,
       assign(
         socket,
-        game: game,
-        vote: "",
-        line: %{},
-        question_master_changeset:
-          %FakeArtist.QuestionMasterForm{}
-          |> FakeArtist.QuestionMasterForm.changeset(%{})
+        game: game
       )
     }
-  end
-
-  defp user_colors(game) do
-    colors = [
-      "#ff0000",
-      "#4f8f25",
-      "#00eaff",
-      "#aa00ff",
-      "#ff7f00",
-      "#0095ff",
-      "#edb9b9",
-      "#23628f",
-      "#8f6a23",
-      "#000000"
-    ]
-
-    game
-    |> Game.artists()
-    |> Enum.map(fn user -> user.id end)
-    |> Enum.zip(colors)
-    |> Map.new()
-  end
-
-  defp drawing(game) do
-    id_to_colors = game |> user_colors
-
-    game.drawing_state
-    |> Enum.map(fn line -> %{color: id_to_colors[line["user_id"]], points: line["points"]} end)
-  end
-
-  def handle_event("start", _params, socket) do
-    case socket.assigns.game |> Game.start() do
-      {:ok, game} -> {:noreply, assign(socket, game: game)}
-      {:error, _reason} -> {:noreply, socket}
-    end
-  end
-
-  def handle_event("leave", _params, socket) do
-    {:noreply,
-     assign(socket,
-       game: socket.assigns.game |> Game.leave(%{user_id: socket.assigns.session_id})
-     )}
-  end
-
-  def handle_event("validate_word", %{"question_master_form" => data}, socket) do
-    {
-      :noreply,
-      assign(
-        socket,
-        question_master_changeset:
-          %FakeArtist.QuestionMasterForm{}
-          |> FakeArtist.QuestionMasterForm.changeset(data)
-          |> Map.put(:action, :insert)
-      )
-    }
-  end
-
-  def handle_event("submit_word", _payload, socket)
-      when not socket.assigns.question_master_changeset.valid? do
-    {:noreply, socket}
-  end
-
-  def handle_event("submit_word", %{"question_master_form" => data}, socket) do
-    {:noreply,
-     assign(socket,
-       game:
-         socket.assigns.game
-         |> Game.choose_category_and_word(%{
-           word: data["word"],
-           category: data["category"],
-           user_id: socket.assigns.session_id
-         })
-     )}
-  end
-
-  def handle_event("submit_drawing", _params, socket) do
-    {:noreply,
-     assign(socket,
-       game:
-         socket.assigns.game
-         |> Game.submit_drawing(%{
-           user_id: socket.assigns.session_id,
-           drawing: %{
-             user_id: socket.assigns.session_id,
-             points: socket.assigns.line.points
-           }
-         }),
-       line: %{}
-     )}
-  end
-
-  def handle_event("undo_drawing", _params, socket) do
-    {:noreply, assign(socket, line: %{points: []})}
-  end
-
-  def handle_event("line_complete", params, socket) do
-    {:noreply, assign(socket, line: %{points: params["points"]})}
-  end
-
-  def handle_event("select_vote", %{"user-id" => user_id}, socket) do
-    {:noreply, assign(socket, vote: user_id)}
-  end
-
-  def handle_event("submit_vote", _params, socket) do
-    {:noreply,
-     assign(socket,
-       game:
-         socket.assigns.game
-         |> Game.submit_vote(%{
-           user_id: socket.assigns.session_id,
-           vote: socket.assigns.vote
-         })
-     )}
-  end
-
-  def handle_event("done", _params, socket) do
-    {:noreply, assign(socket, game: socket.assigns.game |> Game.done_guessing_word())}
-  end
-
-  def handle_event("restart", _params, socket) do
-    {:noreply, assign(socket, game: socket.assigns.game |> Game.restart())}
   end
 
   def handle_info(_msg, socket) do
@@ -177,80 +51,52 @@ defmodule FakeArtistWeb.PlayGameLive do
     </div>
     <% end %>
     <%= if @game.status == :not_started do %>
-      <%= if @game.users |> Enum.find(fn user -> user.id == @session_id end) do %>
-      <button phx-click="leave">Leave</button>
-      <% end %>
-      <button phx-click="start">Start</button>
+      <.live_component
+        module={FakeArtistWeb.PlayGameLive.NotStarted}
+        id="not-started"
+        game={@game}
+        session_id={@session_id}
+      />
     <% end %>
     <%= if @game.status == :selecting_word do %>
-      <%= if @game.question_master_id == @session_id do %>
-        <.form let={f} for={@question_master_changeset} phx-change="validate_word" phx-submit="submit_word">
-            <%= label f, :category %>
-            <%= text_input f, :category %>
-            <%= error_tag f, :category %>
-
-            <%= label f, :word %>
-            <%= text_input f, :word %>
-            <%= error_tag f, :word %>
-
-            <%= submit "Save" %>
-        </.form>
-      <% end %>
+      <.live_component
+        module={FakeArtistWeb.PlayGameLive.SelectingWord}
+        id="selecting-word"
+        game={@game}
+        session_id={@session_id}
+      />
     <% end %>
     <%= if @game.status == :drawing do %>
-    <div>
-      <div>current_user: <%= Enum.find(@game.users, fn user -> user.id === @game.current_user_id end) |> Map.get(:name) %></div>
-      <div>turns_taken: <%= @game.turns_taken %></div>
-      <div>category: <%= @game.drawing_category %></div>
-      <div>word: <%= Game.word(@game, %{ user_id: @session_id }) %></div>
-      <%= if @game.current_user_id == @session_id do %>
-        <button phx-click="undo_drawing">Undo Drawing</button>
-        <button phx-click="submit_drawing">Submit Drawing</button>
-      <% end %>
-      <div
-        id="canvas-container"
-        phx-hook="drawing"
-        data-your-color={user_colors(@game) |> Map.get(@session_id)}
-        data-your-turn={@game.current_user_id == @session_id}
-        data-line={Jason.encode!(@line)}
-        data-drawing={Jason.encode!(drawing(@game))}
-      >
-        <canvas id="canvas" phx-update="ignore">
-          Canvas is not supported!
-        </canvas>
-      </div>
-    </div>
+      <.live_component
+        module={FakeArtistWeb.PlayGameLive.Drawing}
+        id="drawing"
+        game={@game}
+        session_id={@session_id}
+      />
     <% end %>
     <%= if @game.status == :voting do %>
-      <%= if @game.votes |> Map.get(@session_id) do %>
-        <div>Waiting for others to vote</div>
-      <% else %>
-      <h3>Vote for:</h3>
-      <%= for artist <- @game |> Game.artists do %>
-      <div>
-        <button
-          phx-click="select_vote"
-          phx-value-user-id={artist.id}
-          disabled={@vote == artist.id}
-        >
-          <%= artist.name %>
-        </button>
-        </div>
-      <% end %>
-      <button disabled={!@vote} phx-click="submit_vote">Submit</button>
-      <% end %>
+      <.live_component
+        module={FakeArtistWeb.PlayGameLive.Voting}
+        id="voting"
+        game={@game}
+        session_id={@session_id}
+      />
     <% end %>
     <%= if @game.status == :fake_artist_guessing do %>
-      <button phx-click="done">Done</button>
+      <.live_component
+        module={FakeArtistWeb.PlayGameLive.FakeArtistGuessing}
+        id="guessing"
+        game={@game}
+        session_id={@session_id}
+      />
     <% end %>
     <%= if @game.status == :complete do %>
-    <div>
-      <div>Complete</div>
-      <%= for vote <- Map.values(@game.votes) do %>
-      <%= vote %>
-      <% end %>
-      <button phx-click="restart">Start a new game</button>
-    </div>
+      <.live_component
+        module={FakeArtistWeb.PlayGameLive.Complete}
+        id="complete"
+        game={@game}
+        session_id={@session_id}
+      />
     <% end %>
     """
   end
