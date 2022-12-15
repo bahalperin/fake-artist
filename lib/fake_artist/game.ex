@@ -107,7 +107,7 @@ defmodule FakeArtist.Game do
   def leave(game, _user), do: game
 
   def find(%{code: code}) do
-    Repo.get_by(Game, code: code)
+    Repo.get_by(Game, code: String.downcase(code))
   end
 
   def start(game) when length(game.users) < 3 do

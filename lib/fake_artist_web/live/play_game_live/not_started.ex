@@ -31,7 +31,11 @@ defmodule FakeArtistWeb.PlayGameLive.NotStarted do
           <% end %>
         </ul>
       </div>
-      <div class="flex flex-col flex-1">
+      <div class="flex flex-col flex-1 p-8">
+        <h3 class="text-2xl">
+          <span class="font-bold">Game Code:</span>
+          <span class="uppercase"><%= @game.code %></span>
+        </h3>
         <div class="flex flex-col flex-1 justify-center items-center">
           <button
             phx-click="start"
