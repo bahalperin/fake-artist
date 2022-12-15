@@ -5,13 +5,11 @@ let isDrawing = false;
 let points = []
 let animationFrameRequestId;
 let yourColor;
-let liveComponentId;
 
 const init = () => {
   container = document.getElementById('canvas-container')
   canvas = document.getElementById('canvas');
   context = canvas.getContext('2d');
-  liveComponentId = container.getAttribute('data-live-component-id')
 
   yourColor = container.getAttribute('data-your-color')
 
@@ -112,8 +110,11 @@ module.exports.drawing = {
 
     canvas.onmousedown = startDrawing;
     canvas.onmouseup = () => {
+      if (isDrawing) {
+        const liveComponentId = container.getAttribute('data-live-component-id')
+        this.pushEventTo(liveComponentId, "line_complete", { points })
+      }
       stopDrawing();
-      this.pushEventTo(liveComponentId, "line_complete", { points })
     }
     canvas.onmousemove = draw;
 

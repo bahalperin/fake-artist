@@ -34,22 +34,6 @@ defmodule FakeArtistWeb.PlayGameLive do
 
   def render(assigns) do
     ~H"""
-    code: <%= @game.code %>
-    status: <%= Atom.to_string(@game.status) %>
-    <%= for user <- @game.users do %>
-    <div>
-      <%= user.name %>
-      <%= if user.id == @session_id do %>
-      (You)
-      <% end %>
-      <%= if user.id == @game.question_master_id do %>
-      QM
-      <% end %>
-      <%= if user.id == @game.fake_artist_id do %>
-      Fake Artist
-      <% end %>
-    </div>
-    <% end %>
     <%= if @game.status == :not_started do %>
       <.live_component
         module={FakeArtistWeb.PlayGameLive.NotStarted}

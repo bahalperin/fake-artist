@@ -46,22 +46,48 @@ defmodule FakeArtistWeb.PlayGameLive.SelectingWord do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <%= if @game.question_master_id == @session_id do %>
-        <.form let={f} for={@changeset} phx-change="validate_word" phx-submit="submit_word" phx-target={@myself}>
-            <%= label f, :category %>
-            <%= text_input f, :category %>
-            <%= error_tag f, :category %>
+    <div class="flex flex-1 flex-col items-center justify-center w-full">
+      <div class="bg-white shadow-lg rounded px-8 pt-6 pb-8 mb-4 flex flex-col w-full max-w-lg">
+        <%= if @game.question_master_id == @session_id do %>
+          <.form
+            class="flex flex-col gap-8"
+            let={f}
+            for={@changeset}
+            phx-change="validate_word"
+            phx-submit="submit_word"
+            phx-target={@myself}
+          >
+            <div class="flex flex-col gap-2">
+              <div>
+                <%= label(f, :category, class: "text-gray-700") %>
+                <%= text_input(f, :category,
+                  class:
+                    "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                ) %>
+                <%= error_tag(f, :category) %>
+              </div>
 
-            <%= label f, :word %>
-            <%= text_input f, :word %>
-            <%= error_tag f, :word %>
+              <div>
+                <%= label(f, :word, class: "text-gray-700") %>
+                <%= text_input(f, :word,
+                  class:
+                    "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                ) %>
+                <%= error_tag(f, :word) %>
+              </div>
+            </div>
 
-            <%= submit "Save" %>
-        </.form>
-      <% else %>
-        <div>Waiting for Question Master</div>
-      <% end %>
+            <%= submit("Save",
+              class:
+                "group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            ) %>
+          </.form>
+        <% else %>
+          <div class="text-xl font-bold">
+            Waiting for Question Master to Select Word
+          </div>
+        <% end %>
+      </div>
     </div>
     """
   end

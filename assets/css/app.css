@@ -1,5 +1,6 @@
-/* This file is for your main application CSS */
-@import "./phoenix.css";
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 /* Alerts and form errors used by phx.new */
 .alert {
@@ -30,9 +31,7 @@
   display: none;
 }
 .invalid-feedback {
-  color: #a94442;
-  display: block;
-  margin: -1rem 0 2rem;
+  @apply text-red-500;
 }
 
 /* LiveView specific classes for your customization */
@@ -124,9 +123,14 @@
   top: 50px;
   width: 780px;
   height: 490px;
-  border: 1px dotted black;
+  @apply border border-gray-200 rounded;
 }
 
 [data-your-turn] #canvas {
   cursor: crosshair;
+}
+
+[data-phx-main] {
+  display: flex;
+  flex: 1;
 }

@@ -85,7 +85,7 @@ defmodule FakeArtist.Game do
     {:error, :game_already_started}
   end
 
-  def leave(%Game{status: :not_started} = game, %{ user_id: id }) do
+  def leave(%Game{status: :not_started} = game, %{user_id: id}) do
     game_users =
       game.users
       |> Enum.filter(fn user -> user.id != id end)
@@ -99,10 +99,11 @@ defmodule FakeArtist.Game do
       |> Repo.update!()
 
     updated_game
-    |> broadcast({:user_left, %{ user_id: id }})
+    |> broadcast({:user_left, %{user_id: id}})
 
     updated_game
   end
+
   def leave(game, _user), do: game
 
   def find(%{code: code}) do
@@ -150,14 +151,15 @@ defmodule FakeArtist.Game do
       |> artists
       |> Enum.random()
 
-    game = game
-    |> changeset(%{
-      drawing_category: payload.category,
-      drawing_word: payload.word,
-      status: :drawing,
-      current_user_id: first_player.id
-    })
-    |> Repo.update!()
+    game =
+      game
+      |> changeset(%{
+        drawing_category: payload.category,
+        drawing_word: payload.word,
+        status: :drawing,
+        current_user_id: first_player.id
+      })
+      |> Repo.update!()
 
     game
     |> broadcast({:word_chosen})
@@ -172,14 +174,15 @@ defmodule FakeArtist.Game do
     turns_taken = game.turns_taken + 1
     status = if turns_taken >= max_turns(game), do: :voting, else: game.status
 
-    game = game
-    |> changeset(%{
-      drawing_state: [payload.drawing | game.drawing_state],
-      current_user_id: game |> next_artist |> Map.get(:id),
-      turns_taken: turns_taken,
-      status: status
-    })
-    |> Repo.update!()
+    game =
+      game
+      |> changeset(%{
+        drawing_state: [payload.drawing | game.drawing_state],
+        current_user_id: game |> next_artist |> Map.get(:id),
+        turns_taken: turns_taken,
+        status: status
+      })
+      |> Repo.update!()
 
     game
     |> broadcast({:drawing_submitted})
@@ -194,12 +197,13 @@ defmodule FakeArtist.Game do
     vote_count = updated_votes |> map_size
     artist_count = game |> artists |> length
 
-    game = game
-    |> changeset(%{
-      votes: updated_votes,
-      status: if(vote_count == artist_count, do: :fake_artist_guessing, else: game.status)
-    })
-    |> Repo.update!()
+    game =
+      game
+      |> changeset(%{
+        votes: updated_votes,
+        status: if(vote_count == artist_count, do: :fake_artist_guessing, else: game.status)
+      })
+      |> Repo.update!()
 
     game
     |> broadcast({:vote_submitted})
@@ -210,11 +214,12 @@ defmodule FakeArtist.Game do
   def submit_vote(game, _payload), do: game
 
   def done_guessing_word(%Game{status: :fake_artist_guessing} = game) do
-    game = game
-    |> changeset(%{
-      status: :complete
-    })
-    |> Repo.update!()
+    game =
+      game
+      |> changeset(%{
+        status: :complete
+      })
+      |> Repo.update!()
 
     game
     |> broadcast({:guessing_done})
@@ -224,8 +229,9 @@ defmodule FakeArtist.Game do
 
   def done_guessing_word(game), do: game
 
-  def restart(%Game{ status: :complete } = game) do
-    game = game
+  def restart(%Game{status: :complete} = game) do
+    game =
+      game
       |> changeset(%{
         votes: %{},
         drawing_state: [],
@@ -237,17 +243,48 @@ defmodule FakeArtist.Game do
         question_master_id: nil,
         turns_taken: 0
       })
-      |>Repo.update!
+      |> Repo.update!()
 
     game
-      |> broadcast({:restarted})
+    |> broadcast({:restarted})
 
     game
   end
+
   def restart(game), do: game
 
-  def word(game, %{ user_id: id }) when game.fake_artist_id == id, do: "X"
+  def word(game, %{user_id: id}) when game.fake_artist_id == id, do: "X"
   def word(game, _user), do: game.drawing_word
+
+  def artist?(game, %{user_id: id}) do
+    artist =
+      game
+      |> artists
+      |> Enum.find(fn user -> user.id == id end)
+
+    !!artist
+  end
+
+  def voted?(game, %{user_id: id}) do
+    vote = game.votes |> Map.get(id)
+    !!vote
+  end
+
+  def voted_for(game, %{user_id: id}) do
+    artist =
+      game
+      |> artists
+      |> Enum.find(fn artist -> artist.id == game.votes[id] end)
+
+    if artist, do: artist.name, else: ""
+  end
+
+  def total_votes(game, %{user_id: id}) do
+    game.votes
+    |> Map.values()
+    |> Enum.frequencies()
+    |> Map.get(id)
+  end
 
   def subscribe(game) do
     Phoenix.PubSub.subscribe(FakeArtist.PubSub, "game:#{game.code}")
