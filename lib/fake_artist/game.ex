@@ -1,6 +1,7 @@
 defmodule FakeArtist.Game do
   use Ecto.Schema
   import Ecto.Changeset
+  import Ecto.Query
   alias FakeArtist.Repo
   alias __MODULE__
 
@@ -108,6 +109,13 @@ defmodule FakeArtist.Game do
 
   def find(%{code: code}) do
     Repo.get_by(Game, code: String.downcase(code))
+  end
+
+  def delete_expired() do
+    two_days_ago = DateTime.add(DateTime.utc_now(), -2, :day)
+
+    from(game in Game, where: game.updated_at <= ^two_days_ago)
+    |> Repo.delete_all()
   end
 
   def start(game) when length(game.users) < 3 do

@@ -15,7 +15,8 @@ defmodule FakeArtist.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: FakeArtist.PubSub},
       # Start the Endpoint (http/https)
-      FakeArtistWeb.Endpoint
+      FakeArtistWeb.Endpoint,
+      FakeArtist.Jobs.CleanUpOldGames
       # Start a worker by calling: FakeArtist.Worker.start_link(arg)
       # {FakeArtist.Worker, arg}
     ]
