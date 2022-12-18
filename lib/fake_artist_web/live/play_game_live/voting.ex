@@ -1,6 +1,7 @@
 defmodule FakeArtistWeb.PlayGameLive.Voting do
   use FakeArtistWeb, :live_component
   alias FakeArtist.Game
+  alias FakeArtistWeb.Components
 
   def mount(socket) do
     {:ok,
@@ -89,11 +90,11 @@ defmodule FakeArtistWeb.PlayGameLive.Voting do
         </div>
         <div class="flex flex-col gap-2">
           <%= if Game.artist?(@game, %{ user_id: @session_id}) do %>
-            <button
+            <Components.button
               phx-click="submit_vote"
               phx-target={@myself}
               disabled={@vote == ""}
-              class="bg-indigo-600 w-full border border-transparent text-white focus:outline-none enabled:hover:bg-indigo-700 disabled:opacity-50 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5"
+              variant={:primary}
             >
               <%= if Game.voted?(@game, %{ user_id: @session_id }) do %>
                 Submitted Vote for <%= @game.users
@@ -108,7 +109,7 @@ defmodule FakeArtistWeb.PlayGameLive.Voting do
                   Submit
                 <% end %>
               <% end %>
-            </button>
+            </Components.button>
           <% end %>
           <div class="text-gray-600 text-sm">
             <%= if @game.votes |> Map.get(@session_id) || @session_id == @game.question_master_id do %>

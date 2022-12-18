@@ -1,6 +1,7 @@
 defmodule FakeArtistWeb.PlayGameLive.Complete do
   use FakeArtistWeb, :live_component
   alias FakeArtist.Game
+  alias FakeArtistWeb.Components
 
   def handle_event("restart", _params, socket) do
     {:noreply, assign(socket, game: socket.assigns.game |> Game.restart())}
@@ -59,13 +60,14 @@ defmodule FakeArtistWeb.PlayGameLive.Complete do
             </li>
           <% end %>
         </ul>
-        <button
+        <Components.button
           phx-click="restart"
           phx-target={@myself}
           class="bg-indigo-600 w-full border border-transparent text-white focus:outline-none enabled:hover:bg-indigo-700 disabled:opacity-50 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5"
+          variant={:primary}
         >
           Start a new game
-        </button>
+        </Components.button>
       </div>
       <div class="flex flex-col items-center w-full gap-4 p-4">
         <div class="flex flex-col justify-between items-start w-full max-w-[780px] p-2 gap-2 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200">

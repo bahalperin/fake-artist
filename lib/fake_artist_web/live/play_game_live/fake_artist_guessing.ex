@@ -1,6 +1,7 @@
 defmodule FakeArtistWeb.PlayGameLive.FakeArtistGuessing do
   use FakeArtistWeb, :live_component
   alias FakeArtist.Game
+  alias FakeArtistWeb.Components
 
   def handle_event("done", _params, socket) do
     {:noreply, assign(socket, game: socket.assigns.game |> Game.done_guessing_word())}
@@ -68,13 +69,9 @@ defmodule FakeArtistWeb.PlayGameLive.FakeArtistGuessing do
           <% end %>
         </ul>
         <%= if @session_id == @game.fake_artist_id do %>
-          <button
-            phx-click="done"
-            phx-target={@myself}
-            class="bg-indigo-600 w-full border border-transparent text-white focus:outline-none enabled:hover:bg-indigo-700 disabled:opacity-50 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5"
-          >
+          <Components.button phx-click="done" phx-target={@myself} variant={:primary}>
             Done Guessing Word
-          </button>
+          </Components.button>
         <% end %>
       </div>
       <div class="flex flex-col items-center w-full gap-4 p-4">

@@ -1,6 +1,7 @@
 defmodule FakeArtistWeb.PlayGameLive.NotStarted do
   use FakeArtistWeb, :live_component
   alias FakeArtist.Game
+  alias FakeArtistWeb.Components
 
   def handle_event("start", _params, socket) do
     case socket.assigns.game |> Game.start() do
@@ -37,23 +38,20 @@ defmodule FakeArtistWeb.PlayGameLive.NotStarted do
           <span class="uppercase"><%= @game.code %></span>
         </h3>
         <div class="flex flex-col flex-1 justify-center items-center">
-          <button
+          <Components.button
             phx-click="start"
             phx-target={@myself}
-            class="group relative w-full max-w-lg justify-center items-center rounded-md border border-transparent bg-indigo-600 py-4 px-8 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            variant={:primary}
+            class="w-full max-w-lg"
           >
             Start
-          </button>
+          </Components.button>
         </div>
         <div class="flex flex-row justify-end w-full p-4">
           <%= if @game.users |> Enum.find(fn user -> user.id == @session_id end) do %>
-            <button
-              phx-click="leave"
-              phx-target={@myself}
-              class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 mr-2 mb-2"
-            >
+            <Components.button phx-click="leave" phx-target={@myself} variant={:secondary}>
               Leave
-            </button>
+            </Components.button>
           <% else %>
             <a
               href={"/game/join?code=#{@game.code}"}

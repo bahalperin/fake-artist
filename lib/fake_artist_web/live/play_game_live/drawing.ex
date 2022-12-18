@@ -1,6 +1,7 @@
 defmodule FakeArtistWeb.PlayGameLive.Drawing do
   use FakeArtistWeb, :live_component
   alias FakeArtist.Game
+  alias FakeArtistWeb.Components
 
   def mount(socket) do
     {:ok,
@@ -22,7 +23,7 @@ defmodule FakeArtistWeb.PlayGameLive.Drawing do
              points: socket.assigns.line.points
            }
          }),
-       line: %{}
+       line: %{points: []}
      )}
   end
 
@@ -122,22 +123,22 @@ defmodule FakeArtistWeb.PlayGameLive.Drawing do
         </div>
         <%= if @game.current_user_id == @session_id do %>
           <div class="flex flex-row justify-between w-full max-w-[780px] py-4">
-            <button
+            <Components.button
               phx-click="undo_drawing"
               phx-target={@myself}
               disabled={length(@line.points) == 0}
-              class="text-gray-900 bg-white border border-gray-300 focus:outline-none enabled:hover:bg-gray-100 disabled:bg-gray-200 disabled:text-gray-500 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 mr-2 mb-2"
+              variant={:secondary}
             >
               Undo Drawing
-            </button>
-            <button
+            </Components.button>
+            <Components.button
               phx-click="submit_drawing"
               phx-target={@myself}
               disabled={length(@line.points) == 0}
-              class="bg-indigo-600 border border-transparent text-white focus:outline-none enabled:hover:bg-indigo-700 disabled:opacity-50 focus:ring-4 focus:ring-gray-200 font-medium rounded-lg text-sm px-5 py-2.5 mr-2 mb-2"
+              variant={:primary}
             >
               Submit Drawing
-            </button>
+            </Components.button>
           </div>
         <% end %>
       </div>
