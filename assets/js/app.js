@@ -26,6 +26,7 @@ import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import { drawing } from './hooks/drawing'
 
+
 const hooks = {
   drawing
 }
@@ -47,3 +48,13 @@ liveSocket.connect()
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
+
+window.addEventListener("fake_artist:clipcopy", async (event) => {
+  if ("clipboard" in navigator) {
+    const text = event.detail.text;
+    await navigator.clipboard.writeText(text);
+    alert("Copied link!")
+  } else {
+    alert("Sorry, your browser does not support clipboard copy.");
+  }
+});

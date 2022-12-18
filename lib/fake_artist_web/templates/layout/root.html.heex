@@ -7,6 +7,10 @@
     <meta name="csrf-token" content={csrf_token_value()} />
     <%= live_title_tag(assigns[:page_title] || "FakeArtist", suffix: " · Phoenix Framework") %>
     <link phx-track-static rel="stylesheet" href={Routes.static_path(@conn, "/assets/app.css")} />
+    <link
+      href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css"
+      rel="stylesheet"
+    />
     <script
       defer
       phx-track-static

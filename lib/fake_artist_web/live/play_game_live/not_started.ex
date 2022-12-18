@@ -2,6 +2,7 @@ defmodule FakeArtistWeb.PlayGameLive.NotStarted do
   use FakeArtistWeb, :live_component
   alias FakeArtist.Game
   alias FakeArtistWeb.Components
+  alias Phoenix.LiveView.JS
 
   def handle_event("start", _params, socket) do
     case socket.assigns.game |> Game.start() do
@@ -33,10 +34,24 @@ defmodule FakeArtistWeb.PlayGameLive.NotStarted do
         </ul>
       </div>
       <div class="flex flex-col flex-1 p-8">
-        <h3 class="text-2xl">
-          <span class="font-bold">Game Code:</span>
-          <span class="uppercase"><%= @game.code %></span>
-        </h3>
+        <div class="flex flex-row items-center gap-4">
+          <h3 class="text-2xl">
+            <span class="font-bold">Game Code:</span>
+            <span class="uppercase"><%= @game.code %></span>
+          </h3>
+          <button
+            phx-click={
+              JS.dispatch("fake_artist:clipcopy",
+                detail: %{
+                  text: FakeArtistWeb.Endpoint.url() <> "/game/join?code=#{@game.code}"
+                }
+              )
+            }
+            class="flex items-center"
+          >
+            <i class="ri-file-copy-line ri-lg"></i>
+          </button>
+        </div>
         <div class="flex flex-col flex-1 justify-center items-center">
           <Components.button
             phx-click="start"
